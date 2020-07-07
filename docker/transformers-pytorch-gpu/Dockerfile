@@ -7,6 +7,8 @@ RUN apt update && \
                    build-essential \
                    git \
                    curl \
+                   vim \
+                   htop \
                    ca-certificates \
                    python3 \
                    python3-pip && \
@@ -15,11 +17,15 @@ RUN apt update && \
 RUN python3 -m pip install --no-cache-dir --upgrade pip && \
     python3 -m pip install --no-cache-dir \
     mkl \
-    torch
+    numpy 
+
+RUN python3 -m pip install --pre torch torchvision -f https://download.pytorch.org/whl/nightly/cu101/torch_nightly.html
 
 WORKDIR /workspace
 COPY . transformers/
 RUN cd transformers/ && \
     python3 -m pip install --no-cache-dir .
+
+
 
 CMD ["/bin/bash"]
