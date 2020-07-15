@@ -528,7 +528,6 @@ class T5Block(nn.Module):
                 query_length = present_key_value_state[0].shape[2]
             else:
                 query_length = None
-
             cross_attention_outputs = self.layer[1](
                 hidden_states,
                 kv=encoder_hidden_states,
@@ -733,7 +732,6 @@ class T5Stack(T5PreTrainedModel):
         encoder_decoder_position_bias = None
 
         hidden_states = self.dropout(inputs_embeds)
-
         for i, (layer_module, past_key_value_state) in enumerate(zip(self.block, past_key_value_states)):
             if output_hidden_states:
                 all_hidden_states = all_hidden_states + (hidden_states,)
@@ -1037,15 +1035,6 @@ class T5ForConditionalGeneration(T5PreTrainedModel):
         attention_mask=None,
         decoder_attention_mask=None,
         labels=None,
-        encoder_outputs=None,
-        decoder_input_ids=None,
-        decoder_past_key_value_states=None,
-        use_cache=None,
-        inputs_embeds=None,
-        decoder_inputs_embeds=None,
-        head_mask=None,
-        output_attentions=None,
-        output_hidden_states=None,
         **kwargs
     ):
         r"""
@@ -1095,6 +1084,15 @@ class T5ForConditionalGeneration(T5PreTrainedModel):
         >>> input_ids = tokenizer.encode("summarize: Hello, my dog is cute", return_tensors="pt")  # Batch size 1
         >>> outputs = model.generate(input_ids)
         """
+        encoder_outputs=None
+        decoder_input_ids=None
+        decoder_past_key_value_states=None
+        use_cache=None
+        inputs_embeds=None
+        decoder_inputs_embeds=None
+        head_mask=None
+        output_attentions=None
+        output_hidden_states=None
 
         if "lm_labels" in kwargs:
             warnings.warn(
@@ -1159,16 +1157,13 @@ class T5ForConditionalGeneration(T5PreTrainedModel):
         # See https://github.com/tensorflow/mesh/blob/fa19d69eafc9a482aff0b59ddd96b025c0cb207d/mesh_tensorflow/transformer/transformer.py#L586
         sequence_output = sequence_output * (self.model_dim ** -0.5)
         lm_logits = self.lm_head(sequence_output)
-        enable_loss = "enable_loss" in kwargs
         decoder_outputs = (lm_logits,) + decoder_outputs[1:]  # Add hidden states and attention if they are here
-        if enable_loss and labels is not None:
+        if labels is not None:
             loss_fct = CrossEntropyLoss(ignore_index=-100)
             loss = loss_fct(lm_logits.view(-1, lm_logits.size(-1)), labels.view(-1))
             # TODO(thom): Add z_loss https://github.com/tensorflow/mesh/blob/fa19d69eafc9a482aff0b59ddd96b025c0cb207d/mesh_tensorflow/layers.py#L666
             decoder_outputs = (loss,) + decoder_outputs
 
-        if not enable_loss:
-            return decoder_outputs[0]
         return decoder_outputs + encoder_outputs
 
     def prepare_inputs_for_generation(self, input_ids, past, attention_mask, use_cache, **kwargs):
